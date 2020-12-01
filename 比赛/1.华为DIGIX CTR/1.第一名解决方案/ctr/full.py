@@ -57,6 +57,7 @@ def adjust_single(df, key, feature):
 		df.loc[(df['pt_d'] == 10) & (df['coldu'] == 1) & (df['coldt'] == 0), feature]= ((df[(df['pt_d'] == 10) & (df['coldu'] == 1) & (df['coldt'] == 0)][feature] - mean8) / std8 * std7 + mean7 * 1.1)
 		df.loc[(df['pt_d'] == 10) & (df['coldu'] == 1) & (df['coldt'] == 1), feature]= ((df[(df['pt_d'] == 10) & (df['coldu'] == 1) & (df['coldt'] == 1)][feature] - mean8) / std8 * std7 * 0.8 + mean7 * 0.8)
 	return df
+	
 
 def group_fea(df,key,target):
 	tmp = df.groupby(key, as_index=False)[target].agg({
@@ -275,15 +276,19 @@ def graph_emb(sentences, G, df_weight, f1, f2):
 
 def make_feature(df):
 
-	# count特征
+	# count特征：统计所有ID类特征在8天内的曝光次数（即count特征）
 	print('开始构造count特征')
 	cate_cols = ['uid', 'task_id', 'adv_id', 'creat_type_cd', 'adv_prim_id', 'dev_id', 'inter_type_cd', 'slot_id',
 					'spread_app_id', 'tags', 'app_first_class', 'app_second_class', 'city', 'city_rank', 'device_name',
 					'device_size', 'career', 'gender', 'net_type', 'residence', 'app_score', 'emui_dev','consume_purchase', 'indu_name']
+	#tqdm是一个进度条
 	for f in tqdm(cate_cols):
+	    #这里先统计这个类别特征中各个枚举值出现的次数，再映射到对应列的对应枚举值上，比如a--10,所以可以求var
 		tmp = df[f].map(df[f].value_counts())
 		if tmp.var() > 1:
 			df[f + '_count'] = tmp
+			#这里的意思是如果方差大于1，那么就对这个特征进行分布迁移，当然，只针对于uid，
+			#因为这个uid的新用户中，混入了部分老用户，需要把它们和前7天的分布一致
 			df = adjust_single(df, f, f + '_count')
 
 #     # nunique特征
@@ -291,6 +296,8 @@ def make_feature(df):
 	nunique_group = []
 
 	print('用户')
+	# 统计用户ID与所有广告侧ID、广告ID与所有用户侧ID的类别交叉，如某个用户ID曝光过多少不同的广告ID（即nunique特征）
+	#这里是用户维度的nunique特征，其实就是group by 后求nunique=count distinct
 	key = 'uid'
 	feature_target = ['task_id', 'adv_id', 'dev_id', 'indu_name', 'adv_prim_id',  'slot_id', 'spread_app_id']
 	for target in tqdm(feature_target):
@@ -324,7 +331,7 @@ def make_feature(df):
 
 	df = reduce(df)
 
-	# embedding特征
+	# embedding特征：构建广告曝光序列，训练word2vector得到广告表征，平均广告表征得到用户表征
 	print('开始构造emb特征')
 	emb_cols = [['uid', 'adv_id']]
 	sort_df = df.sort_values('pt_d').reset_index(drop=True)
@@ -332,7 +339,7 @@ def make_feature(df):
 		tmp, tmp2 = emb_adjust(sort_df, f1, f2)
 		df = df.merge(tmp, on=f1, how='left').merge(tmp2, on=f2, how='left').fillna(0)
 
-	# ctr特征
+	# ctr特征：统计所有ID类特征前所有天的历史点击率
 	print('开始构造ctr特征')
 	mean_rate = df[df['pt_d'] < 8]['label'].mean()
 	feature_list = cate_cols
