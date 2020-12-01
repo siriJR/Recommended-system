@@ -1,0 +1,10 @@
+
+
+1.StratifiedKFold和KFold生成交叉验证数据集的区别
+
+1.1 相关链接：https://blog.csdn.net/MsSpark/article/details/84455402?utm_medium=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-1.control&depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-1.control
+
+1.2 StratifiedKFold分层采样，用于交叉验证：与KFold最大的差异在于，StratifiedKFold方法是根据标签中不同类别占比来进行拆分数据的
+
+1.3 n_splits的理解：对于不能均等分的数据集，前n_samples%n_spllits子集拥有n_samples//n_spllits+1个样本，其余子集都只有n_samples//n_spllits个样本。
+   （例10行数据分3份，只有一份可分4行，其他均为3行）
