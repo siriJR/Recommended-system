@@ -125,7 +125,9 @@ def emb2(df, f1, f2):
 def emb_adjust(df, f1, f2):
 	emb_size = 8
 	df = df.fillna(0)
+	#先获取uid下的所有曝光的广告id序列
 	tmp = df.groupby(f1, as_index=False)[f2].agg({'{}_{}_list'.format(f1, f2): list})
+	#然后生成词，其实就是广告id的序列集合，切分成一个个，每一行是一个用户对应的广告id合集
 	sentences = tmp['{}_{}_list'.format(f1, f2)].values.tolist()
 	for i in range(len(sentences)):
 		sentences[i] = [str(x) for x in sentences[i]]
@@ -133,6 +135,7 @@ def emb_adjust(df, f1, f2):
 
 	index_dict = {}
 	emb_matrix = []
+	#这里的意思是，如果一个用户曝光的广告超过1个，则取所有曝光广告emb的均值
 	for i in tqdm(range(len(sentences))):
 		seq = sentences[i]
 		vec = []
@@ -148,6 +151,7 @@ def emb_adjust(df, f1, f2):
 	for i in range(emb_size):
 		tmp['{}_of_{}_emb_{}'.format(f1, f2, i)] = emb_matrix[:, i]
 
+    #同理，对于每一个曝光的广告id，找出被曝光的用户序列集合
 	tmp_f2 = df.groupby(f2, as_index=False)[f1].agg({'{}_{}_list'.format(f2, f1): list})
 	sentences_f2 = tmp_f2['{}_{}_list'.format(f2, f1)].values.tolist()
 	index_dict_f2 = {}
@@ -457,6 +461,7 @@ if __name__ == "__main__":
 	# test_df_A['testb'] = 0
 	# test_df_B['testb'] = 1
 	train_uid = set(df_raw['uid'])
+    #coldu 为冷启动用户
 	test_df_A['coldu'] = test_df_A['uid'].apply(lambda x: 1 if x not in train_uid else 0)
 	test_df_B['coldu'] = test_df_B['uid'].apply(lambda x: 1 if x not in train_uid else 0)
 	train_uid = set(list(set(df_raw['uid'])) + list(set(test_df_A['uid'])))
@@ -487,3 +492,4 @@ if __name__ == "__main__":
 	res['probability'] = preds
 	res['probability'] = res['probability'].astype(np.float32)
 	res.to_csv('result/submission_'+str(fold)+'_all.csv',index = False)
+
