@@ -1,1 +1,5 @@
 
+1.Factorization Machines（2010）
+
+主要解决的问题：
+①.FM模型能在稀疏数据下进行参数估计，但SVM模型不能。
