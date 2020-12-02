@@ -7,3 +7,23 @@
 1.1 相关链接：https://mp.weixin.qq.com/s/9wwwuHG-ybAfJnHjVboF-A
 
 1.2 转换成标准正态分布的证明：https://www.zhihu.com/question/30121927
+
+
+
+2.如何在lgb中设置样本的权重
+
+在华为的华为DIGIX CTR赛题中，要预测第8天曝光广告的点击率，训练集为前7天的曝光ad，则训练模型时考虑到距离预测天越近权重越大的特点，
+同如下处理：pt_d从1~8，代表不同的日期：
+weight = X_train['pt_d'] / X_train['pt_d'].max()
+lgb_train = lgb.Dataset(X_train[feature], y_train, weight = weight)
+
+
+3.用户点击序列的广告emb生成
+
+在华为的华为DIGIX CTR赛题中，通过构建每一个用户曝光过的广告ad序列，从而构建emb特征，比如uid1--ad1,ad2,ad3,ad6,同理，对每一个曝光的ad，找出所有的
+曝光uid:  ad1--uid1,uid3,uid8.
+
+构造这样的矩阵后，通过
+model = Word2Vec(sentences, size=emb_size, window=6, min_count=5, sg=0, hs=0, seed=1, iter=5)
+训练好emb模型，再取出对应ad的emb向量，如果一个用户对应多个ad，则可以通过取均值的方式进行合并：
+emb_matrix.append(np.mean(vec, axis=0))
