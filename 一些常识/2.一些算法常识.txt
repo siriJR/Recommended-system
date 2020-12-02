@@ -8,6 +8,17 @@
 
 1.2 转换成标准正态分布的证明：https://www.zhihu.com/question/30121927
 
+def adjust_single(df, key, feature):
+	if key == 'uid':
+		mean7 = df[df['pt_d'] < 8].drop_duplicates(['uid'])[feature].mean()
+		std7 = df[df['pt_d'] < 8].drop_duplicates(['uid'])[feature].std()
+		mean8 = df[(df['pt_d'] >= 8) & (df['coldu'] == 1)].drop_duplicates(['uid'])[feature].mean()
+		std8 = df[(df['pt_d'] >= 8) & (df['coldu'] == 1)].drop_duplicates(['uid'])[feature].std()
+		df.loc[(df['pt_d'] == 10) & (df['coldu'] == 1) & (df['coldt'] == 0), feature]= ((df[(df['pt_d'] == 10) & (df['coldu'] == 1) & (df['coldt'] == 0)][feature] - mean8) / std8 * std7 + mean7 * 1.1)
+		df.loc[(df['pt_d'] == 10) & (df['coldu'] == 1) & (df['coldt'] == 1), feature]= ((df[(df['pt_d'] == 10) & (df['coldu'] == 1) & (df['coldt'] == 1)][feature] - mean8) / std8 * std7 * 0.8 + mean7 * 0.8)
+	return df
+
+
 
 
 2.如何在lgb中设置样本的权重
