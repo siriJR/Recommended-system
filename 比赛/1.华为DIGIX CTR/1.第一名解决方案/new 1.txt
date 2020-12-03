@@ -1,0 +1,12 @@
+for i in tqdm(range(len(sentences))):
+	seq = sentences[i]
+	vec = []
+	for w in seq:
+		if w in model.wv.vocab:
+			vec.append(model.wv[w])
+	if len(vec) > 0:
+		emb_matrix.append(np.mean(vec, axis=0))
+	else:
+		emb_matrix.append([0] * emb_size)
+	index_dict[tmp[f1][i]] = i
+emb_matrix = np.array(emb_matrix)
