@@ -130,10 +130,79 @@
 
 
 
+【2】基于spark的特征工程（scala版）
+
+1.类别型特征的独热编码
+
+分为one-hot和Multiple-hot:
+
+Multiple编码
+顾名思义，Multiple编码特征将多个属性同时编码到一个特征中。在推荐场景中，单个用户对哪些物品感兴趣的特征就是一种Multiple编码特征，如，表示某用户对产品1、产品2、产品3、产品4是否感兴趣，则这个特征可能有多个取值，如用户A对产品1和产品2感兴趣，用户B对产品1和产品4感兴趣，用户C对产品1、产品3和产品4感兴趣，则用户兴趣特征为
+用户 UserInterests
+A [1, 2]
+B [1, 4]
+C [1, 3, 4]
+
+Multiple编码采用类似oneHot编码的形式进行编码，根据物品种类数目，展成物品种类数目大小的向量，当某个用户感兴趣时，对应维度为1，反之为0，如下
+用户 UserInterests
+A [1, 1, 0, 0]
+B [1, 0, 0, 1]
+C [1, 0, 1, 1]
+
+参考：https://www.codeleading.com/article/97252516619/#_OneHot_19
+
+相关代码：
+
+def oneHotEncoderExample(samples:DataFrame): Unit ={
+  //samples样本集中的每一条数据代表一部电影的信息，其中movieId为电影id
+  val samplesWithIdNumber = samples.withColumn("movieIdNumber", col("movieId").cast(sql.types.IntegerType))
+
+  //利用Spark的机器学习库Spark MLlib创建One-hot编码器
+  val oneHotEncoder = new OneHotEncoderEstimator()
+    .setInputCols(Array("movieIdNumber"))
+    .setOutputCols(Array("movieIdVector"))
+    .setDropLast(false)
+
+  //训练One-hot编码器，并完成从id特征到One-hot向量的转换
+  val oneHotEncoderSamples =oneHotEncoder.fit(samplesWithIdNumber).transform(samplesWithIdNumber)
+  //打印最终样本的数据结构
+  oneHotEncoderSamples.printSchema()
+  //打印10条样本查看结果
+  oneHotEncoderSamples.show(10)
+
+_（参考 com.wzhe.sparrowrecsys.offline.spark.featureeng.FeatureEngineering__中的oneHotEncoderExample函数）_
 
 
 
+multiHotEncoderExample：
 
+  def multiHotEncoderExample(samples:DataFrame): Unit ={
+    val samplesWithGenre = samples.select(col("movieId"), col("title"),explode(split(col("genres"), "\\|").cast("array<string>")).as("genre"))
+    val genreIndexer = new StringIndexer().setInputCol("genre").setOutputCol("genreIndex")
+
+    val stringIndexerModel : StringIndexerModel = genreIndexer.fit(samplesWithGenre)
+
+    val genreIndexSamples = stringIndexerModel.transform(samplesWithGenre)
+      .withColumn("genreIndexInt", col("genreIndex").cast(sql.types.IntegerType))
+
+    val indexSize = genreIndexSamples.agg(max(col("genreIndexInt"))).head().getAs[Int](0) + 1
+
+    val processedSamples =  genreIndexSamples
+      .groupBy(col("movieId")).agg(collect_list("genreIndexInt").as("genreIndexes"))
+        .withColumn("indexSize", typedLit(indexSize))
+
+    val finalSample = processedSamples.withColumn("vector", array2vec(col("genreIndexes"),col("indexSize")))
+    finalSample.printSchema()
+    finalSample.show(10)
+  }
+
+
+2.数值型特征
+
+一般用Normalizer（按行处理，而不是按列-特征处理）、
+      StandardScaler（均值为0方差为1的分布）、
+	  RobustScaler（通过四分位数缩放数据）、
+	  MinMaxScaler（[0,1]）
 
 
 
